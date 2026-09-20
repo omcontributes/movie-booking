@@ -1,0 +1,455 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>CineBook - Movie Booking</title>
+    <style>
+        :root {
+          --bg1: #1e1b4b;
+          --bg2: #4c1d95;
+          --bg3: #be185d;
+          --card: #ffffff;
+          --ink: #1f2937;
+          --muted: #6b7280;
+          --primary: #7c3aed;
+          --primary-dark: #6d28d9;
+          --accent: #f59e0b;
+          --ok: #10b981;
+          --danger: #ef4444;
+          --seat-free: #d1fae5;
+          --seat-free-border: #34d399;
+          --seat-taken: #e5e7eb;
+        }
+        * { box-sizing: border-box; }
+        body {
+          font-family: "Segoe UI", Arial, sans-serif;
+          margin: 0;
+          padding: 0 12px 40px;
+          color: var(--ink);
+          min-height: 100vh;
+          background: linear-gradient(135deg, var(--bg1) 0%, var(--bg2) 55%, var(--bg3) 100%);
+          background-attachment: fixed;
+        }
+        .wrap { max-width: 860px; margin: 0 auto; }
+
+        header { text-align: center; padding: 34px 10px 22px; color: #fff; }
+        header h1 { margin: 0; font-size: 38px; letter-spacing: 1px; }
+        header h1 span { background: linear-gradient(90deg, #fde68a, #f9a8d4); -webkit-background-clip: text; background-clip: text; color: transparent; }
+        header p { margin: 8px 0 0; opacity: .85; font-size: 15px; }
+
+        .card {
+          background: var(--card);
+          padding: 22px;
+          border-radius: 18px;
+          box-shadow: 0 12px 30px rgba(0,0,0,.25);
+          margin-bottom: 20px;
+        }
+        .card h2 { margin: 0 0 16px; font-size: 19px; display: flex; align-items: center; gap: 10px; }
+        .step {
+          display: inline-flex; align-items: center; justify-content: center;
+          width: 30px; height: 30px; border-radius: 50%;
+          color: #fff; font-size: 15px; font-weight: bold;
+          background: linear-gradient(135deg, #7c3aed, #ec4899);
+        }
+        .hidden { display: none; }
+
+        /* Movie cards */
+        .movie-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 14px; }
+        .movie {
+          border: 0; border-radius: 16px; padding: 16px; color: #fff; cursor: pointer; text-align: left;
+          min-height: 150px; display: flex; flex-direction: column; justify-content: flex-end;
+          box-shadow: 0 6px 14px rgba(0,0,0,.2);
+          transition: transform .15s, box-shadow .15s;
+          font-family: inherit;
+        }
+        .movie:hover { transform: translateY(-4px); box-shadow: 0 12px 22px rgba(0,0,0,.28); }
+        .movie.active { outline: 4px solid var(--accent); transform: translateY(-4px); }
+        .movie .emoji { font-size: 38px; margin-bottom: auto; }
+        .movie .title { font-weight: bold; font-size: 16px; margin-top: 10px; }
+        .movie .meta { font-size: 12px; opacity: .9; margin-top: 4px; }
+        .movie .desc { font-size: 11px; opacity: .85; margin-top: 6px; line-height: 1.35; }
+        .g-scifi    { background: linear-gradient(135deg, #0ea5e9, #6366f1); }
+        .g-drama    { background: linear-gradient(135deg, #f97316, #dc2626); }
+        .g-comedy   { background: linear-gradient(135deg, #facc15, #f97316); color: #422006; }
+        .g-thriller { background: linear-gradient(135deg, #334155, #7c3aed); }
+        .g-default  { background: linear-gradient(135deg, #14b8a6, #3b82f6); }
+
+        /* Show chips */
+        .chips { display: flex; flex-wrap: wrap; gap: 10px; }
+        .chip {
+          border: 2px solid #ddd6fe; background: #f5f3ff; color: #4c1d95; border-radius: 12px;
+          padding: 10px 14px; cursor: pointer; text-align: left; font-size: 14px; font-weight: 600; font-family: inherit;
+          transition: all .15s;
+        }
+        .chip:hover { border-color: var(--primary); transform: translateY(-2px); }
+        .chip.active { background: linear-gradient(135deg, #7c3aed, #ec4899); color: #fff; border-color: transparent; }
+        .chip small { display: block; font-weight: normal; opacity: .85; margin-top: 3px; }
+
+        /* Seats */
+        .screen-wrap { perspective: 300px; margin-bottom: 20px; }
+        .screen {
+          margin: 0 auto; max-width: 440px; text-align: center; padding: 8px;
+          font-size: 12px; letter-spacing: 6px; color: #4c1d95; font-weight: bold;
+          background: linear-gradient(#ddd6fe, #ede9fe);
+          border-radius: 6px 6px 50% 50% / 6px 6px 24px 24px;
+          box-shadow: 0 14px 30px rgba(124,58,237,.45);
+          transform: rotateX(-14deg);
+        }
+        .grid { display: flex; flex-direction: column; align-items: center; gap: 7px; overflow-x: auto; padding: 6px 0; }
+        .row { display: flex; gap: 7px; align-items: center; }
+        .row-label { width: 22px; font-weight: bold; font-size: 13px; color: var(--primary); text-align: center; }
+        .seat {
+          width: 34px; height: 34px; border-radius: 9px 9px 5px 5px; font-size: 11px; padding: 0; cursor: pointer;
+          background: var(--seat-free); border: 2px solid var(--seat-free-border); color: #065f46; font-weight: 600; font-family: inherit;
+          transition: transform .1s;
+        }
+        .seat:hover:not(:disabled) { transform: scale(1.15); background: #a7f3d0; }
+        .seat.selected { background: linear-gradient(135deg, #f59e0b, #ef4444); border-color: #f59e0b; color: #fff; transform: scale(1.08); }
+        .seat:disabled { background: var(--seat-taken); border-color: #d1d5db; color: #9ca3af; cursor: not-allowed; }
+        .legend { display: flex; flex-wrap: wrap; gap: 18px; justify-content: center; font-size: 13px; margin: 16px 0 6px; color: var(--muted); }
+        .legend span::before { content: ""; display: inline-block; width: 14px; height: 14px; border-radius: 4px; margin-right: 7px; vertical-align: middle; border: 2px solid; }
+        .legend .free::before  { background: var(--seat-free); border-color: var(--seat-free-border); }
+        .legend .sel::before   { background: linear-gradient(135deg, #f59e0b, #ef4444); border-color: #f59e0b; }
+        .legend .taken::before { background: var(--seat-taken); border-color: #d1d5db; }
+
+        .summary {
+          margin: 14px 0; padding: 12px; text-align: center; font-size: 15px; font-weight: 600;
+          background: linear-gradient(90deg, #ede9fe, #fce7f3); color: #4c1d95; border-radius: 12px;
+        }
+
+        input[type=text], input[type=email] {
+          width: 100%; padding: 12px; border: 2px solid #e5e7eb; border-radius: 10px; font-size: 15px; margin-top: 8px;
+          font-family: inherit; transition: border-color .15s;
+        }
+        input:focus { outline: none; border-color: var(--primary); }
+        .two { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+
+        button.primary {
+          margin-top: 14px; padding: 12px 22px; color: #fff; border: 0; border-radius: 10px; font-size: 15px; font-weight: 600; cursor: pointer;
+          background: linear-gradient(135deg, #7c3aed, #ec4899); font-family: inherit; transition: transform .1s, box-shadow .15s;
+          box-shadow: 0 6px 14px rgba(124,58,237,.35);
+        }
+        button.primary:hover:not(:disabled) { transform: translateY(-2px); }
+        button.danger { background: linear-gradient(135deg, #ef4444, #f97316); box-shadow: 0 6px 14px rgba(239,68,68,.35); }
+        button:disabled { opacity: .45; cursor: not-allowed; }
+
+        .msg { margin-top: 14px; padding: 11px 14px; border-radius: 10px; font-size: 14px; font-weight: 500; }
+        .msg.error { background: #fee2e2; color: #991b1b; border-left: 5px solid var(--danger); }
+        .msg.ok { background: #d1fae5; color: #065f46; border-left: 5px solid var(--ok); }
+
+        /* Ticket */
+        .ticket {
+          position: relative; margin-top: 14px; border-radius: 16px; overflow: hidden; background: #fff;
+          border: 2px solid #ddd6fe; box-shadow: 0 8px 18px rgba(124,58,237,.2);
+        }
+        .ticket-top { background: linear-gradient(135deg, #7c3aed, #ec4899); color: #fff; padding: 14px 18px; }
+        .ticket-top .label { font-size: 11px; letter-spacing: 3px; opacity: .85; }
+        .ticket-top .code { font-size: 28px; font-weight: bold; letter-spacing: 5px; margin-top: 2px; }
+        .ticket-body { padding: 16px 18px; font-size: 14px; line-height: 1.9; border-top: 3px dashed #ddd6fe; position: relative; }
+        .ticket-body::before, .ticket-body::after {
+          content: ""; position: absolute; top: -12px; width: 22px; height: 22px; border-radius: 50%; background: #f3e8ff;
+        }
+        .ticket-body::before { left: -12px; }
+        .ticket-body::after { right: -12px; }
+        .ticket-body .movie-name { font-size: 18px; font-weight: bold; color: #4c1d95; }
+        .badge { display: inline-block; padding: 2px 12px; border-radius: 999px; font-size: 12px; font-weight: bold; color: #fff; }
+        .badge.CONFIRMED { background: var(--ok); }
+        .badge.CANCELLED { background: var(--danger); }
+        .seat-tag { display: inline-block; background: #ede9fe; color: #5b21b6; padding: 1px 9px; border-radius: 6px; margin: 2px 3px 2px 0; font-weight: 600; }
+        .total { font-size: 18px; font-weight: bold; color: #be185d; }
+
+        footer { text-align: center; color: rgba(255,255,255,.75); font-size: 13px; padding: 10px; }
+
+        @media (max-width: 560px) {
+          .two { grid-template-columns: 1fr; }
+          .seat { width: 27px; height: 27px; font-size: 10px; }
+          .row, .grid { gap: 5px; }
+          header h1 { font-size: 30px; }
+        }
+    </style>
+</head>
+<body>
+<div class="wrap">
+    <header>
+        <h1>🎬 <span>CineBook</span></h1>
+        <p>Pick a movie, choose your seats, and grab your ticket in seconds</p>
+    </header>
+
+    <section class="card">
+        <h2><span class="step">1</span> Choose a movie</h2>
+        <div id="movies" class="movie-grid"></div>
+    </section>
+
+    <section class="card hidden" id="showsCard">
+        <h2><span class="step">2</span> Choose a show</h2>
+        <div id="shows" class="chips"></div>
+    </section>
+
+    <section class="card hidden" id="seatsCard">
+        <h2><span class="step">3</span> Pick your seats</h2>
+        <div class="screen-wrap"><div class="screen">SCREEN THIS WAY</div></div>
+        <div id="seatGrid" class="grid"></div>
+        <div class="legend"><span class="free">Available</span><span class="sel">Selected</span><span class="taken">Booked</span></div>
+        <div id="summary" class="summary"></div>
+        <div class="two">
+            <input type="text" id="name" placeholder="Your name">
+            <input type="email" id="email" placeholder="Email">
+        </div>
+        <button class="primary" id="bookBtn">🎟️ Book seats</button>
+        <div id="bookMsg"></div>
+    </section>
+
+    <section class="card hidden" id="resultCard"></section>
+
+    <section class="card">
+        <h2>🔍 Find or cancel a booking</h2>
+        <input type="text" id="lookupCode" placeholder="Booking code, e.g. K7M2XQ9P">
+        <button class="primary" id="lookupBtn">Look up</button>
+        <div id="lookupResult"></div>
+    </section>
+
+    <footer>Built with Java, Spring Boot and JPA</footer>
+</div>
+
+<script>
+    const MAX_SEATS = 10;
+    let selectedMovie = null;
+    let seatMap = null;
+    let selected = new Set();
+
+    const GENRES = {
+      'sci-fi':   { cls: 'g-scifi',    emoji: '🚀' },
+      'drama':    { cls: 'g-drama',    emoji: '🎭' },
+      'comedy':   { cls: 'g-comedy',   emoji: '😂' },
+      'thriller': { cls: 'g-thriller', emoji: '🕵️' }
+    };
+
+    async function api(url, options) {
+      const res = await fetch(url, options);
+      let data = null;
+      try { data = await res.json(); } catch (e) { /* empty body */ }
+      if (!res.ok) throw new Error((data && data.error) || 'Something went wrong');
+      return data;
+    }
+
+    function el(tag, className, text) {
+      const node = document.createElement(tag);
+      if (className) node.className = className;
+      if (text !== undefined) node.textContent = text;
+      return node;
+    }
+
+    function fmtTime(iso) {
+      return new Date(iso).toLocaleString([], { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+    }
+
+    function show(id) { document.getElementById(id).classList.remove('hidden'); }
+    function hide(id) { document.getElementById(id).classList.add('hidden'); }
+
+    function message(containerId, text, type) {
+      const box = document.getElementById(containerId);
+      box.replaceChildren();
+      if (text) box.appendChild(el('div', 'msg ' + type, text));
+    }
+
+    async function loadMovies() {
+      const box = document.getElementById('movies');
+      try {
+        const movies = await api('/api/movies');
+        box.replaceChildren();
+        movies.forEach(m => {
+          const g = GENRES[(m.genre || '').toLowerCase()] || { cls: 'g-default', emoji: '🎬' };
+          const b = el('button', 'movie ' + g.cls);
+          b.appendChild(el('div', 'emoji', g.emoji));
+          b.appendChild(el('div', 'title', m.title));
+          b.appendChild(el('div', 'meta', m.genre + ' · ' + m.language + ' · ' + m.durationMinutes + ' min'));
+          b.appendChild(el('div', 'desc', m.description || ''));
+          b.onclick = () => chooseMovie(m, b);
+          box.appendChild(b);
+        });
+      } catch (e) {
+        box.appendChild(el('div', 'msg error', e.message));
+      }
+    }
+
+    async function chooseMovie(movie, button) {
+      selectedMovie = movie;
+      document.querySelectorAll('#movies .movie').forEach(c => c.classList.remove('active'));
+      button.classList.add('active');
+      hide('seatsCard'); hide('resultCard');
+      const box = document.getElementById('shows');
+      box.replaceChildren();
+      try {
+        const shows = await api('/api/movies/' + movie.id + '/shows');
+        if (shows.length === 0) box.appendChild(el('div', 'msg error', 'No upcoming shows for this movie.'));
+        shows.forEach(s => {
+          const b = el('button', 'chip');
+          b.appendChild(document.createTextNode('🕒 ' + fmtTime(s.showTime)));
+          b.appendChild(el('small', '', s.screenName + ' · ₹' + s.pricePerSeat + ' per seat'));
+          b.onclick = () => {
+            document.querySelectorAll('#shows .chip').forEach(c => c.classList.remove('active'));
+            b.classList.add('active');
+            chooseShow(s.id);
+          };
+          box.appendChild(b);
+        });
+        show('showsCard');
+        document.getElementById('showsCard').scrollIntoView({ behavior: 'smooth', block: 'start' });
+      } catch (e) {
+        box.appendChild(el('div', 'msg error', e.message));
+        show('showsCard');
+      }
+    }
+
+    async function chooseShow(showId) {
+      selected = new Set();
+      message('bookMsg', '');
+      hide('resultCard');
+      try {
+        await refreshSeats(showId);
+        show('seatsCard');
+        document.getElementById('seatsCard').scrollIntoView({ behavior: 'smooth', block: 'start' });
+      } catch (e) {
+        alert(e.message);
+      }
+    }
+
+    async function refreshSeats(showId) {
+      seatMap = await api('/api/shows/' + showId + '/seats');
+      selected = new Set([...selected].filter(s => !seatMap.bookedSeats.includes(s)));
+      renderSeats();
+    }
+
+    function renderSeats() {
+      const grid = document.getElementById('seatGrid');
+      grid.replaceChildren();
+      for (let r = 0; r < seatMap.totalRows; r++) {
+        const letter = String.fromCharCode(65 + r);
+        const row = el('div', 'row');
+        row.appendChild(el('span', 'row-label', letter));
+        for (let n = 1; n <= seatMap.seatsPerRow; n++) {
+          const id = letter + n;
+          const b = el('button', 'seat', String(n));
+          b.title = id;
+          if (seatMap.bookedSeats.includes(id)) {
+            b.disabled = true;
+          } else {
+            if (selected.has(id)) b.classList.add('selected');
+            b.onclick = () => toggleSeat(id);
+          }
+          row.appendChild(b);
+        }
+        grid.appendChild(row);
+      }
+      updateSummary();
+    }
+
+    function toggleSeat(id) {
+      if (selected.has(id)) {
+        selected.delete(id);
+      } else {
+        if (selected.size >= MAX_SEATS) {
+          message('bookMsg', 'You can select at most ' + MAX_SEATS + ' seats.', 'error');
+          return;
+        }
+        selected.add(id);
+      }
+      message('bookMsg', '');
+      renderSeats();
+    }
+
+    function updateSummary() {
+      const box = document.getElementById('summary');
+      if (selected.size === 0) {
+        box.textContent = '🎥 ' + seatMap.movieTitle + ' · ' + fmtTime(seatMap.showTime) + ' · Select your seats';
+      } else {
+        const total = Number(seatMap.pricePerSeat) * selected.size;
+        box.textContent = '💺 ' + [...selected].sort().join(', ') + '  ·  Total ₹' + total;
+      }
+      document.getElementById('bookBtn').disabled = selected.size === 0;
+    }
+
+    document.getElementById('bookBtn').onclick = async () => {
+      const name = document.getElementById('name').value.trim();
+      const email = document.getElementById('email').value.trim();
+      if (!name || !email) { message('bookMsg', 'Please enter your name and email.', 'error'); return; }
+      try {
+        const booking = await api('/api/bookings', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ showId: seatMap.showId, customerName: name, customerEmail: email, seats: [...selected] })
+        });
+        selected = new Set();
+        message('bookMsg', '');
+        const box = document.getElementById('resultCard');
+        box.replaceChildren(el('h2', '', '✅ Booking confirmed'));
+        renderBooking(box, booking);
+        show('resultCard');
+        box.scrollIntoView({ behavior: 'smooth' });
+        await refreshSeats(seatMap.showId);
+      } catch (e) {
+        message('bookMsg', e.message, 'error');
+        try { await refreshSeats(seatMap.showId); } catch (err) { /* ignore */ }
+      }
+    };
+
+    function renderBooking(container, b) {
+      const ticket = el('div', 'ticket');
+
+      const top = el('div', 'ticket-top');
+      top.appendChild(el('div', 'label', 'BOOKING CODE'));
+      top.appendChild(el('div', 'code', b.bookingCode));
+      ticket.appendChild(top);
+
+      const body = el('div', 'ticket-body');
+      body.appendChild(el('div', 'movie-name', '🎬 ' + b.movieTitle));
+      body.appendChild(el('div', '', b.screenName + ' · ' + fmtTime(b.showTime)));
+
+      const seatsLine = el('div', '');
+      seatsLine.appendChild(document.createTextNode('Seats: '));
+      b.seats.forEach(s => seatsLine.appendChild(el('span', 'seat-tag', s)));
+      body.appendChild(seatsLine);
+
+      body.appendChild(el('div', '', '👤 ' + b.customerName + ' (' + b.customerEmail + ')'));
+      body.appendChild(el('div', 'total', 'Total: ₹' + b.totalAmount));
+
+      const statusLine = el('div', '');
+      statusLine.appendChild(el('span', 'badge ' + b.status, b.status));
+      body.appendChild(statusLine);
+
+      ticket.appendChild(body);
+      container.appendChild(ticket);
+    }
+
+    document.getElementById('lookupBtn').onclick = async () => {
+      const code = document.getElementById('lookupCode').value.trim();
+      const box = document.getElementById('lookupResult');
+      box.replaceChildren();
+      if (!code) return;
+      try {
+        const b = await api('/api/bookings/' + encodeURIComponent(code));
+        renderBooking(box, b);
+        if (b.status === 'CONFIRMED') {
+          const cancel = el('button', 'primary danger', 'Cancel this booking');
+          cancel.onclick = async () => {
+            if (!confirm('Cancel booking ' + b.bookingCode + '?')) return;
+            try {
+              await api('/api/bookings/' + encodeURIComponent(b.bookingCode), { method: 'DELETE' });
+              document.getElementById('lookupBtn').click();
+              if (seatMap) await refreshSeats(seatMap.showId);
+            } catch (e) {
+              box.appendChild(el('div', 'msg error', e.message));
+            }
+          };
+          box.appendChild(cancel);
+        }
+      } catch (e) {
+        box.appendChild(el('div', 'msg error', e.message));
+      }
+    };
+
+    loadMovies();
+</script>
+</body>
+</html>
