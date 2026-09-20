@@ -84,4 +84,4 @@ src/main/java/com/example/moviebooking
 - Email confirmation for bookings
 
 ## Author
-**Om** - [GitHub](https://github.com/omcontributes)
+**Om Amrale** - [GitHub](https://github.com/omcontributes)
