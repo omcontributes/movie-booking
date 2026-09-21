@@ -2,7 +2,7 @@
 
 A movie ticket booking system built with **Java 17, Spring Boot 3 and Spring Data JPA**, with a colorful web front-end. Browse movies, pick a show, choose your seats on a seat map, and get a booking code.
 
-**Live demo:** [add your Render link here]
+**Live demo:** https://movie-booking-5nb4.onrender.com
 
 > Note: this runs on a free instance. The first load can take 1 to 2 minutes to wake up, and bookings reset when the app restarts.
 
